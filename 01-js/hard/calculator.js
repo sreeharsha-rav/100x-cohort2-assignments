@@ -9,13 +9,53 @@
     - getResult: returns the value of `result` variable
     - calculate: takes a string expression which can take multi-arithmetic operations and give its result
       example input: `10 +   2 *    (   6 - (4 + 1) / 2) + 7`
-      Points to Note: 
+      Points to Note:
         1. the input can have multiple continuous spaces, you're supposed to avoid them and parse the expression correctly
         2. the input can have invalid non-numerical characters like `5 + abc`, you're supposed to throw error for such inputs
 
   Once you've implemented the logic, test your code by running
 */
 
-class Calculator {}
+class Calculator {
+  constructor() {
+    this.result = 0;
+  }
+
+  add(number) {
+    this.result += number;
+    return this;
+  }
+
+  subtract(number) {
+    this.result -= number;
+    return this;
+  }
+
+  multiply(number) {
+    this.result *= number;
+    return this;
+  }
+
+  divide(number) {
+    if (number === 0) {
+      throw new Error("Cannot divide by zero");
+    }
+    this.result /= number;
+    return this;
+  }
+
+  clear() {
+    this.result = 0;
+    return this;
+  }
+
+  getResult() {
+    return this.result;
+  }
+
+  calculate(expression) {
+    //TODO
+  }
+}
 
 module.exports = Calculator;
