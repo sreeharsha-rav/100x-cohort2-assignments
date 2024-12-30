@@ -23,17 +23,14 @@ class Calculator {
 
   add(number) {
     this.result += number;
-    return this;
   }
 
   subtract(number) {
     this.result -= number;
-    return this;
   }
 
   multiply(number) {
     this.result *= number;
-    return this;
   }
 
   divide(number) {
@@ -41,12 +38,10 @@ class Calculator {
       throw new Error("Cannot divide by zero");
     }
     this.result /= number;
-    return this;
   }
 
   clear() {
     this.result = 0;
-    return this;
   }
 
   getResult() {
@@ -54,7 +49,25 @@ class Calculator {
   }
 
   calculate(expression) {
-    //TODO
+    const temp = expression;
+    const cleanedExpression = temp.replace(/\s+/g, "");
+    const isValidExpression = /^[0-9+\-*/().]+$/.test(cleanedExpression);
+
+    if (!isValidExpression) {
+      throw new Error("Invalid expression.");
+    }
+
+    try {
+      this.result = eval(expression);
+    } catch (error) {
+      throw new Error("Invalid expression.");
+    }
+
+    if (this.result === Infinity) {
+      throw new Error("Cannot divide a number by 0.");
+    }
+
+    return this.result;
   }
 }
 
