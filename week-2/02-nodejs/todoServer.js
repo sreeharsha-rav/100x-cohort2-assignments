@@ -10,26 +10,26 @@
     Description: Returns a list of all todo items.
     Response: 200 OK with an array of todo items in JSON format.
     Example: GET http://localhost:3000/todos
-    
+
   2.GET /todos/:id - Retrieve a specific todo item by ID
     Description: Returns a specific todo item identified by its ID.
     Response: 200 OK with the todo item in JSON format if found, or 404 Not Found if not found.
     Example: GET http://localhost:3000/todos/123
-    
+
   3. POST /todos - Create a new todo item
     Description: Creates a new todo item.
     Request Body: JSON object representing the todo item.
     Response: 201 Created with the ID of the created todo item in JSON format. eg: {id: 1}
     Example: POST http://localhost:3000/todos
     Request Body: { "title": "Buy groceries", "completed": false, description: "I should buy groceries" }
-    
+
   4. PUT /todos/:id - Update an existing todo item by ID
     Description: Updates an existing todo item identified by its ID.
     Request Body: JSON object representing the updated todo item.
     Response: 200 OK if the todo item was found and updated, or 404 Not Found if not found.
     Example: PUT http://localhost:3000/todos/123
     Request Body: { "title": "Buy groceries", "completed": true }
-    
+
   5. DELETE /todos/:id - Delete a todo item by ID
     Description: Deletes a todo item identified by its ID.
     Response: 200 OK if the todo item was found and deleted, or 404 Not Found if not found.
@@ -39,11 +39,90 @@
 
   Testing the server - run `npm run test-todoServer` command in terminal
  */
-  const express = require('express');
-  const bodyParser = require('body-parser');
-  
-  const app = express();
-  
-  app.use(bodyParser.json());
-  
-  module.exports = app;
+const express = require("express");
+const bodyParser = require("body-parser");
+const fs = require("fs");
+
+const app = express();
+
+app.use(bodyParser.json());
+
+let todos = [];
+
+// Load todos from file if it exists
+const loadTodos = () => {
+  if (fs.existsSync("todos.json")) {
+    const data = fs.readFileSync("todos.json");
+    todos = JSON.parse(data);
+  }
+};
+
+// Save todos to file
+const saveTodos = () => {
+  fs.writeFileSync("todos.json", JSON.stringify(todos, null, 2));
+};
+
+loadTodos();
+
+// Retrieve all todo items
+app.get("/todos", (req, res) => {
+  res.status(200).json(todos);
+});
+
+// Retrieve a specific todo item by ID
+app.get("/todos/:id", (req, res) => {
+  const todo = todos.find((t) => t.id === parseInt(req.params.id));
+  if (todo) {
+    res.status(200).json(todo);
+  } else {
+    res.status(404).send("Todo not found");
+  }
+});
+
+// Create a new todo item
+app.post("/todos", (req, res) => {
+  const { title, description } = req.body;
+  const newTodo = {
+    id: todos.length ? todos[todos.length - 1].id + 1 : 1,
+    title,
+    description,
+  };
+  todos.push(newTodo);
+  saveTodos();
+  res.status(201).json({ id: newTodo.id });
+});
+
+// Update an existing todo item by ID
+app.put("/todos/:id", (req, res) => {
+  const { title, description } = req.body;
+  const todoIndex = todos.findIndex((t) => t.id === parseInt(req.params.id));
+  if (todoIndex !== -1) {
+    const todo = todos[todoIndex];
+    todo.title = title !== undefined ? title : todo.title;
+    todo.description =
+      description !== undefined ? description : todo.description;
+    saveTodos();
+    res.status(200).json(todo);
+  } else {
+    res.status(404).send("Todo not found");
+  }
+});
+
+// Delete a todo item by ID
+app.delete("/todos/:id", (req, res) => {
+  const todoIndex = todos.findIndex((t) => t.id === parseInt(req.params.id));
+  if (todoIndex !== -1) {
+    todos.splice(todoIndex, 1);
+    saveTodos();
+    res.status(200).send("Todo deleted");
+  } else {
+    res.status(404).send("Todo not found");
+  }
+});
+
+// Handle undefined routes
+app.use((req, res) => {
+  res.status(404).send("Route not found");
+});
+
+module.exports = app;
