@@ -1,0 +1,48 @@
+/* Input container styling */
+.input-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Input field styling */
+.todoInput {
+    flex-grow: 1;
+    padding: 8px;
+    font-size: 16px;
+}
+
+/* Add button styling */
+.addButton {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* Todo item styling */
+.todo-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    gap: 10px;
+}
+
+/* Delete button styling */
+.delete-btn {
+    padding: 4px 8px;
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-left: auto;
+}
+
+/* Completed todo item styling */
+.completed {
+    text-decoration: line-through;
+    color: #666;
+}
