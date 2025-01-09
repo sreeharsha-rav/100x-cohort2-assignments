@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Simple Counter App</title>
+    </head>
+    <body>
+        <button id="counter" onclick="incrementCounter()">Counter 0</button>
+        <script>
+            const counterButton = document.getElementById("counter");
+
+            function incrementCounter() {
+                console.log("\nIncrementing counter");
+                const count = counterButton.innerText.split(" ")[1];
+                counterButton.innerText = `Counter ${parseInt(count) + 1}`;
+            }
+        </script>
+    </body>
+</html>
