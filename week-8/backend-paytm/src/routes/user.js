@@ -1,159 +1,106 @@
-const { Router } = require("express");
-const { User, Account } = require("../db");
-const { Op } = require("sequelize");
-const z = require("zod");
-const { compare } = require("bcrypt");
+const router = require("express").Router();
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config");
+const { User } = require("../models/index");
+const config = require("../config/config");
+const validateRequest = require("../middlewares/validate");
+const authMiddleware = require("../middlewares/auth");
+const { registerSchema, loginSchema } = require("../utils/validators");
 
-// routes
-const router = Router();
-
-// signup user
-const signupRequestSchema = z.object({
-  name: z.string().min(3).max(30),
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-router.post("/signup", async (req, res, next) => {
+// sign up user
+router.post("/signup", validateRequest(registerSchema), async (req, res) => {
   try {
-    const { name, email, password } = signupRequestSchema.parse(req.body);
+    const { email, name, password } = req.validatedData;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // check if user already exists
-    const userExists = await User.findOne({ where: { email: email } });
-    if (userExists) {
-      return res
-        .status(411)
-        .send({ success: false, message: "User already exists" });
-    }
-
-    // create user
     const user = await User.create({
-      name: name,
-      email: email,
-      password: password,
+      email,
+      name,
+      password: hashedPassword,
+      balance: Math.floor(1000 + Math.random() * 9000, 2), // random balance b/w 1000 and 9999
     });
 
-    // Create account
-    const account = await Account.create({
-      userId: user.id,
-      balance: 1 + Math.floor(Math.random() * 10000), // random balance between 1 and 10000
+    const token = jwt.sign({ userId: user.id }, config.JWT_SECRET, {
+      expiresIn: "24h",
     });
 
     res
       .status(201)
-      .send({ success: true, message: "User created successfully" });
+      .json({ success: true, message: "User created successfully", token });
   } catch (error) {
-    next(error);
-  }
-});
-
-// login user
-const loginRequestSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-router.post("/login", async (req, res, next) => {
-  try {
-    const { email, password } = loginRequestSchema.parse(req.body);
-
-    // check if user exists
-    const user = await User.findOne({ where: { email: email } });
-    if (!user) {
-      return res.status(400).send({
-        success: false,
-        message: "User does not exist for the given email",
-      });
-    }
-
-    // check password
-    const isPasswordCorrect = await compare(password, user.password);
-    if (!isPasswordCorrect) {
+    if (error.name === "SequelizeUniqueConstraintError") {
       return res
-        .status(411)
-        .send({ success: false, message: "Invalid password" });
+        .status(400)
+        .json({ success: false, error: "Email already exists" });
     }
-
-    // generate token
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
-      JWT_SECRET
-    );
-
-    res.status(200).send({
-      success: true,
-      token: token,
-      message: "Logged in successfully",
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// update user
-const updateUserRequestSchema = z.object({
-  name: z.string().min(3).max(30).optional(),
-  email: z.string().email().optional(),
-  password: z.string().min(6).optional(),
-});
-
-router.put("/update", async (req, res, next) => {
-  try {
-    const { name, email, password } = updateUserRequestSchema.parse(req.body);
-
-    if (!success) {
-      return res
-        .status(411)
-        .send({ success: false, message: `Error updating user: ${message}` });
-    }
-
-    // update user
-    const user = await User.findOne({ where: { id: req.user.id } });
-    if (!user) {
-      return res
-        .status(404)
-        .send({ success: false, message: "User not found" });
-    }
-
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.password = password || user.password;
-    await user.save();
-
     res
-      .status(200)
-      .send({ success: true, message: "User updated successfully" });
-  } catch (error) {
-    next(error);
+      .status(400)
+      .json({ success: false, message: "Registration failed", error });
   }
 });
 
-// get filtered users
-router.get("/bulk", async (req, res, next) => {
+// sign in user
+router.post("/signin", validateRequest(loginSchema), async (req, res) => {
   try {
-    const filter = req.query.filter || "";
+    const { email, password } = req.validatedData;
+    const user = await User.findOne({ where: { email } });
 
+    if (!user) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found, invalid email" });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid password" });
+    }
+
+    const token = jwt.sign({ userId: user.id }, config.JWT_SECRET, {
+      expiresIn: "24h",
+    });
+
+    res.json({ success: true, message: "Login successful", token });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Login failed", error });
+  }
+});
+
+// get user details
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.userId, {
+      attributes: { exclude: ["password"] },
+    });
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to get user" });
+  }
+});
+
+// get balance
+router.get("/balance", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.userId, { attributes: ["balance"] });
+    res.json({ success: true, balance: user.balance });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to get balance" });
+  }
+});
+
+// get all users
+router.get("/all", authMiddleware, async (req, res) => {
+  try {
     const users = await User.findAll({
-      where: {
-        [Op.or]: [
-          { name: { [Op.like]: `%${filter}%` } },
-          { email: { [Op.like]: `%${filter}%` } },
-        ],
+      attributes: {
+        exclude: ["password", "balance", "createdAt", "updatedAt"],
       },
-      attributes: ["id", "name", "email"],
     });
-
-    res
-      .status(200)
-      .send({ success: true, users: users, message: "Users fetched" });
+    res.json({ success: true, users });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Failed to get users" });
   }
 });
 
