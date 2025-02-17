@@ -1,0 +1,19 @@
+import { z } from 'zod';
+
+export const postSchema = z.object({
+	id: z.string().uuid(),
+	title: z.string().min(1).max(255),
+	body: z.string().min(1),
+	authorId: z.string().uuid(),
+	published: z.boolean(),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export const createPostSchema = z.object({
+	title: z.string().min(1).max(255),
+	body: z.string().min(1),
+	published: z.boolean().optional(),
+});
+
+export const updatePostSchema = createPostSchema.partial();
