@@ -18,13 +18,14 @@ export const getAllPostsHandler = async (c: HonoContext) => {
 					username: true,
 				},
 			},
+			tags: true,
 		},
 	});
 	return c.json({ posts });
 };
 
 export const createPostHandler = async (c: HonoContext) => {
-	const data = c.get('validated') as CreatePostInput;
+	const { tags, ...data } = c.get('validated') as CreatePostInput;
 	const user = c.get('user');
 	const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -32,6 +33,11 @@ export const createPostHandler = async (c: HonoContext) => {
 		data: {
 			...data,
 			authorId: user.userId,
+			tags: tags
+				? {
+						connect: tags.map((tagId) => ({ id: tagId })),
+				  }
+				: undefined,
 		},
 		include: {
 			author: {
@@ -40,6 +46,7 @@ export const createPostHandler = async (c: HonoContext) => {
 					username: true,
 				},
 			},
+			tags: true,
 		},
 	});
 
@@ -59,6 +66,7 @@ export const getPostHandler = async (c: HonoContext) => {
 					username: true,
 				},
 			},
+			tags: true,
 		},
 	});
 
@@ -71,7 +79,7 @@ export const getPostHandler = async (c: HonoContext) => {
 
 export const updatePostHandler = async (c: HonoContext) => {
 	const id = c.req.param('id');
-	const data = c.get('validated') as UpdatePostInput;
+	const { tags, ...data } = c.get('validated') as UpdatePostInput;
 	const user = c.get('user');
 	const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -89,7 +97,14 @@ export const updatePostHandler = async (c: HonoContext) => {
 
 	const post = await prisma.post.update({
 		where: { id },
-		data,
+		data: {
+			...data,
+			tags: tags
+				? {
+						set: tags.map((tagId) => ({ id: tagId })),
+				  }
+				: undefined,
+		},
 		include: {
 			author: {
 				select: {
@@ -97,6 +112,7 @@ export const updatePostHandler = async (c: HonoContext) => {
 					username: true,
 				},
 			},
+			tags: true,
 		},
 	});
 

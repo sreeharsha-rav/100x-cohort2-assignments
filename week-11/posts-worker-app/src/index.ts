@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { userRouter } from './routes/users';
 import { postRouter } from './routes/posts';
+import { tagRouter } from './routes/tags';
 import type { Env } from './types/env';
 import type { Variables } from './types/hono';
 
@@ -25,6 +26,7 @@ app.onError((err, c) => {
 // Routes
 app.route('/users', userRouter);
 app.route('/posts', postRouter);
+app.route('/tags', tagRouter);
 
 // health check
 app.get('/health', (c) => {
